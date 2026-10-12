@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EEF7F4">
+<title>가락 꼬들</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* 레이아웃: 휴대폰 한 화면에 위에서부터 듣기 → 가락판 → 실로폰. 실로폰 한 가지 모습으로만 그린다(밝은 단일 테마). */
+:root{
+  --bg:#EEF7F4; --card:#FFFFFF; --ink:#1F2A44; --sub:#4A5870; --line:#C9D6D2; --err:#B42318;
+  --ok:#1E8449; --near:#F5C542; --no:#667085; --on-dark:#FFFFFF; --rare:#FDF1CC; --gold:#D4A017; --gold-soft:#FFF6D6; --gold-mid:#FFE08A; --gold-deep:#6B4E00;
+  --c0:#E5484D; --c1:#F2853A; --c2:#F5C542; --c3:#3DAA6D; --c4:#2FA8B5; --c5:#3E7BD6; --c6:#8A5BD0; --c7:#E0559A;
+  --display:'Jua','Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--display);font-size:16px;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;border:0;cursor:pointer;color:var(--ink);touch-action:manipulation}
+button:focus-visible,input:focus-visible{outline:3px solid var(--c5);outline-offset:2px}
+.app{max-width:390px;margin:0 auto;padding-inline:20px;padding-block:10px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.top>div{display:flex;gap:6px;align-items:center}
+h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
+.round{width:44px;height:44px;border-radius:50%;background:var(--card);font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tabs{display:flex;background:var(--card);border-radius:20px;padding:3px;gap:3px}
+.tabs button{flex:1;height:34px;border-radius:17px;background:transparent;font-size:16px}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--on-dark)}
+.listen{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:8px 12px}
+.play{width:50px;height:50px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.play svg{fill:var(--on-dark)}
+.play.spent{opacity:.35}
+.info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.info b{font-weight:400;font-size:19px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.info span{font-family:var(--body);font-size:13.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{font-style:normal;font-family:var(--body);font-size:12.5px;padding:2px 8px;border-radius:10px;background:var(--bg);color:var(--ink)}
+.tag.hard{background:var(--ink);color:var(--on-dark)}
+.pill{height:44px;padding:0 14px;border-radius:22px;background:var(--bg);font-size:15px;white-space:nowrap}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--on-dark)}
+.top .pill{background:var(--card);padding:0 12px}
+.top .pill[aria-pressed="true"]{background:var(--ink);color:var(--on-dark)}
+.top .pill.locked{opacity:.5}
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;max-width:290px;width:100%;margin:0 auto}
+.r{height:20px;display:flex;justify-content:center;align-items:center;color:var(--sub);border-radius:8px}
+.r.now{color:var(--c0)}
+.t{aspect-ratio:1;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid var(--line);background:var(--card)}
+.t.f{border-color:var(--ink)}
+.t.g{background:var(--ok);border-color:var(--ok);color:var(--on-dark)}
+.t.y{background:var(--near);border-color:var(--near);color:var(--ink)}
+.t.x{background:var(--no);border-color:var(--no);color:var(--on-dark)}
+.t.pop{animation:pop .28s ease-out}
+@keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+.up{position:relative}
+.up::before{content:"";position:absolute;left:50%;top:-5px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
+.xylo{display:flex;gap:6px;align-items:center;height:96px;max-width:330px;width:100%;margin:0 auto}
+.bar{flex:1;min-width:0;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 0;box-sizing:border-box;transition:transform .08s}
+.bar:active,.bar.hit{transform:translateY(3px) scale(.97)}
+.bar.off{opacity:.3}
+.bar i{width:6px;height:6px;border-radius:50%;background:var(--ink);opacity:.45}
+.bar span.lab{width:28px;height:28px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:16px}
+.acts{display:flex;gap:10px;max-width:330px;width:100%;margin:0 auto}
+.btn{height:48px;border-radius:24px;background:var(--card);font-size:18px;padding:0 20px}
+.btn.main{flex:1;background:var(--ink);color:var(--on-dark)}
+.result{display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
+.veil.bottom{align-items:flex-end;padding:0}
+.veil.bottom .sheet{max-width:430px;border-radius:24px 24px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));animation:up .3s ease-out}
+@keyframes up{0%{transform:translateY(40%);opacity:.4}100%{transform:none;opacity:1}}
+.sheethead{display:flex;justify-content:flex-end;margin:-8px -8px -14px 0}
+.sheethead .round{background:var(--bg)}
+.result h2{margin:0;font-size:24px;font-weight:400;text-wrap:balance}
+.result p{margin:0;font-family:var(--body);font-size:14.5px;color:var(--sub)}
+.result>svg{width:100%;height:auto;max-width:330px}
+.result .acts{flex-wrap:wrap}
+.result .btn{flex:1;white-space:nowrap}
+.stars{display:flex;gap:6px;justify-content:center}
+.badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:14px;background:var(--ink);color:var(--on-dark);font-size:15px}
+.result .meta{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;font-family:var(--body);font-size:14.5px;color:var(--sub)}
+.result .goal{font-size:16px;color:var(--ink);font-family:var(--display)}
+.catbox{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--bg);border-radius:18px;padding:12px;width:100%;box-sizing:border-box}
+.catbox img{width:150px;height:150px}
+.catbox img.new{animation:catin .6s cubic-bezier(.3,1.5,.5,1)}
+@keyframes catin{0%{transform:scale(.3) translateY(30px);opacity:0}100%{transform:none;opacity:1}}
+.catbox b{font-weight:400;font-size:20px}
+.catbox .btn{flex:none}
+.chip{display:inline-flex;font-size:13px;padding:3px 10px;border-radius:12px;background:var(--card);color:var(--ink)}
+.chip.t2{background:var(--rare)}
+.chip.t3{background:var(--ink);color:var(--gold-mid)}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);background:var(--ink);color:var(--on-dark);padding:10px 18px;border-radius:20px;font-size:16px;z-index:20;white-space:nowrap}
+.veil{position:fixed;inset:0;background:rgba(31,42,68,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:10}
+.sheet{background:var(--card);border-radius:22px;padding:20px;max-width:350px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;max-height:90%;overflow:auto}
+.sheet h2{margin:0;font-size:24px;font-weight:400}
+.sheet ol{margin:0;padding-left:20px;font-family:var(--body);font-size:15px;line-height:1.6;display:flex;flex-direction:column;gap:4px}
+.sheet p{margin:0;font-family:var(--body);font-size:15px;line-height:1.5;color:var(--sub)}
+.key{display:flex;align-items:center;gap:10px;font-family:var(--body);font-size:15px}
+.key .t{width:36px;flex-shrink:0;font-family:var(--display);font-size:17px}
+#tryXylo.locked .bar{opacity:.3}
+.field{display:flex;flex-direction:column;gap:4px;font-family:var(--body);font-size:14px;color:var(--sub)}
+.field input{height:50px;border-radius:14px;border:2px solid var(--line);padding:0 14px;font-size:20px;font-family:var(--display);color:var(--ink);background:var(--card);box-sizing:border-box;width:100%}
+.field input:focus{border-color:var(--ink)}
+.err{color:var(--err);font-family:var(--body);font-size:14px;min-height:20px}
+.link{background:none;font-family:var(--body);font-size:14px;color:var(--sub);text-decoration:underline;height:44px}
+.dexhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dex{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dex .c{background:var(--bg);border-radius:14px;padding:6px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;border:2px solid transparent;min-width:0}
+.dex .c.t2{border-color:var(--near)}
+.dex .c.t3{border-color:var(--gold);background:linear-gradient(160deg,var(--gold-soft),var(--gold-mid));position:relative;overflow:hidden;box-shadow:0 2px 0 var(--gold)}
+.dex .c.t3::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.8) 50%,transparent 65%);transform:translateX(-100%);animation:shine 3.4s ease-in-out infinite;pointer-events:none}
+@keyframes shine{0%,55%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.dex .c.t3 span{color:var(--gold-deep)}
+.dex .c.t3.no img{opacity:.2}
+.spark{position:absolute;fill:var(--gold)}
+.spark.s1{top:6px;left:7px;width:14px;height:14px}
+.spark.s2{top:16px;right:8px;width:9px;height:9px}
+.dexsec{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;font-size:16px;margin-top:4px}
+.dexsec small{font-family:var(--body);font-size:13px;color:var(--sub)}
+.dexsec.t3{color:var(--gold-deep)}
+.catbox.t3{background:linear-gradient(160deg,var(--gold-soft),var(--gold-mid));border:2px solid var(--gold);position:relative;overflow:hidden}
+.dex img{width:100%;max-width:92px;aspect-ratio:1}
+.dex .c.no img{filter:brightness(0);opacity:.13}
+.dex .c b{font-weight:400;font-size:14px;white-space:nowrap}
+.dex .c span{font-family:var(--body);font-size:11.5px;color:var(--sub);text-align:center}
+.gauge{display:flex;gap:4px;justify-content:center}
+.gauge i{width:16px;height:22px;border-radius:5px;background:var(--line)}
+.gauge i.on{background:var(--c1)}
+.demo{font-family:var(--body);font-size:12.5px;color:var(--sub);text-align:center}
+@media (prefers-reduced-motion:reduce){.dex .c.t3::after{animation:none;display:none}.t.pop,.catbox img.new,.veil.bottom .sheet{animation:none}.bar{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1>가락 꼬들</h1>
+    <div>
+      <button class="pill" id="hardBtn" aria-pressed="false">고수 모드</button>
+      <button class="round" id="dexBtn" aria-label="고양이 도감"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 9V3l5 4h6l5-4v6c1 1.5 1 3.5 1 5 0 4-4 7-9 7s-9-3-9-7c0-1.5 0-3.5 1-5z"/><circle cx="9" cy="13" r=".8" fill="currentColor"/><circle cx="15" cy="13" r=".8" fill="currentColor"/></svg></button>
+      <button class="round" id="helpBtn" aria-label="놀이 방법">?</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button id="tabDaily" aria-pressed="true">오늘의 가락</button>
+    <button id="tabPractice" aria-pressed="false">연습</button>
+  </div>
+  <div class="listen">
+    <button class="play" id="playBtn" aria-label="가락 듣기"></button>
+    <div class="info"><b id="infoTitle">오늘의 가락</b><span id="infoSub"></span></div>
+    <button class="pill" id="slowBtn" aria-pressed="false">느리게</button>
+  </div>
+  <div class="board" id="rhythm"></div>
+  <div class="board" id="board" aria-live="polite"></div>
+  <div id="inputArea">
+    <div class="xylo" id="xylo"></div>
+  </div>
+  <div class="acts" id="acts">
+    <button class="btn" id="delBtn">지우기</button>
+    <button class="btn main" id="okBtn">제출하고 듣기</button>
+  </div>
+  <div class="acts" id="doneBar" hidden>
+    <button class="btn" id="showResult">결과 보기</button>
+    <button class="btn main" id="doneNext">연습하러 가기</button>
+  </div>
+</div>
+<div class="veil bottom" id="resultVeil" hidden>
+  <div class="sheet" role="dialog" aria-label="결과">
+    <div class="sheethead"><button class="round" data-close aria-label="닫기"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
+    <div class="result" id="result"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<div class="veil" id="helpVeil" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">놀이 방법</h2>
+    <ol>
+      <li>재생 단추를 눌러 가락을 듣습니다. 몇 번이든 다시 들을 수 있습니다.</li>
+      <li>실로폰을 눌러 여섯 음을 채웁니다. 누를 때는 소리가 나지 않아요.</li>
+      <li>제출하면 그때 내가 넣은 가락이 들리고 칸마다 색이 바뀝니다.</li>
+      <li>여섯 번 안에 맞히면 어떤 노래인지 알려 줍니다.</li>
+    </ol>
+    <div class="key"><div class="t g">솔</div>음도 맞고 자리도 맞아요.</div>
+    <div class="key"><div class="t y">미</div>가락에 있는 음이지만 자리가 달라요.</div>
+    <div class="key"><div class="t x">라</div>가락에 없는 음이거나, 이미 다 찾은 음이에요.</div>
+    <div class="key"><div class="t f"><span class="up">도</span></div>점이 찍힌 도는 높은 도예요.</div>
+    <h2>별과 고양이</h2>
+    <ol style="list-style:none;padding-left:0">
+      <li>별 셋: 3번 안에, 정답을 2번 이하로 듣고 맞히기</li>
+      <li>별 둘: 5번 안에, 정답을 4번 이하로 듣고 맞히기</li>
+      <li>오늘의 가락을 맞히면 하루에 한 마리, 새 고양이가 합주단에 들어와요. 별 셋이면 귀한 고양이, 고수 인증이면 아주 귀한 고양이를 만나요.</li>
+      <li>연습에서 맞히면 별 수만큼 츄르를 받아요. 고수 모드로 맞히면 두 배예요. 츄르 10개가 모이면 새 고양이가 찾아와요. 츄르는 하루에 20개까지 받을 수 있어요.</li>
+      <li>고수 모드: 정답은 한 번만 들을 수 있고 기회는 4번이에요. 문제를 시작하기 전에만 켜고 끌 수 있어요.</li>
+      <li>느리게 듣기는 연습에서만 쓸 수 있어요.</li>
+    </ol>
+    <h2>소리 익히기</h2>
+    <div class="key" id="tryNote"></div>
+    <div class="xylo" id="tryXylo" style="height:80px"></div>
+    <button class="btn main" data-close>알겠어요</button>
+  </div>
+</div>
+
+<div class="veil" id="dexVeil" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="dexTitle">
+    <div class="dexhead"><h2 id="dexTitle">고양이 합주단</h2><span class="chip" id="dexCount"></span></div>
+    <p id="dexWho"></p>
+    <div class="dex" id="dexGrid"></div>
+    <div class="acts"><button class="btn" id="logoutBtn">로그아웃</button><button class="btn main" data-close>닫기</button></div>
+  </div>
+</div>
+
+<div class="veil" id="loginVeil" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="loginTitle">
+    <h2 id="loginTitle">가락 꼬들</h2>
+    <div id="loginForm" style="display:flex;flex-direction:column;gap:12px">
+      <p>닉네임과 비밀번호 4자리로 들어오면, 어느 기기에서든 모은 고양이가 이어져요.</p>
+      <label class="field" for="nickIn">닉네임 (한글·영어·숫자 2~8자)<input id="nickIn" autocomplete="off" maxlength="8"></label>
+      <label class="field" for="pinIn">비밀번호 (숫자 4자리)<input id="pinIn" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <div class="err" id="loginErr"></div>
+      <button class="btn main" id="loginGo" style="flex:none">시작하기</button>
+    </div>
+    <div id="joinAsk" hidden style="display:flex;flex-direction:column;gap:12px">
+      <p id="joinText"></p>
+      <div class="err" id="joinErr"></div>
+      <div class="acts"><button class="btn" id="joinBack">다시 입력</button><button class="btn main" id="joinGo">새로 시작</button></div>
+    </div>
+    <button class="link" id="skipLogin">로그인 없이 하기 (고양이는 모을 수 없어요)</button>
+    <div class="demo" id="demoNote" hidden>체험판이에요. 기록이 이 기기에만 저장돼요.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+/* ===== 설정: 구글 Apps Script 웹 앱 주소를 넣으세요. 비워 두면 이 기기에만 저장되는 체험판으로 돌아갑니다. ===== */
+var API_URL='https://script.google.com/macros/s/AKfycbx6QufrwXdh3N8iPypXXvKP-P-QJU4-Z5ExwVSf3FK9Vl_e-n_1UAqoEisEZH2hbVPYsg/exec';
+function catSrc(i){return 'cats/cat'+(i<10?'0':'')+i+'.webp'}
+
+var NAMES=['도','레','미','파','솔','라','시','도'];
+var FREQ=[523.25,587.33,659.25,698.46,783.99,880,987.77,1046.5];
+// 저작권이 끝난 옛 가락만 싣습니다. n: 계이름 번호(0=도 … 7=높은 도), d: 박 길이, tail: 맞힌 뒤 이어 들려줄 음
+var SONGS=[
+ {t:'작은 별',n:[0,0,4,4,5,5],d:[1,1,1,1,1,1],bpm:112,tail:[[4,2]]},
+ {t:'작은 별',n:[3,3,2,2,1,1],d:[1,1,1,1,1,1],bpm:112,tail:[[0,2]]},
+ {t:'작은 별',n:[4,4,3,3,2,2],d:[1,1,1,1,1,1],bpm:112,tail:[[1,2]]},
+ {t:'나비야',n:[4,2,2,3,1,1],d:[1,1,2,1,1,2],bpm:120},
+ {t:'나비야',n:[0,1,2,3,4,4],d:[1,1,1,1,1,1],bpm:120,tail:[[4,2]]},
+ {t:'비행기',n:[2,1,0,1,2,2],d:[1.5,.5,1,1,1,1],bpm:116,tail:[[2,2]]},
+ {t:'머리 어깨 무릎 발',n:[4,5,4,3,2,3],d:[1.5,.5,1,1,1,1],bpm:120,tail:[[4,2]]},
+ {t:'머리 어깨 무릎 발',n:[1,2,3,2,3,4],d:[1,1,2,1,1,2],bpm:120},
+ {t:'환희의 송가',n:[2,2,3,4,4,3],d:[1,1,1,1,1,1],bpm:120,tail:[[2,1],[1,1]]},
+ {t:'환희의 송가',n:[0,0,1,2,2,1],d:[1,1,1,1,1.5,.5],bpm:120,tail:[[1,2]]},
+ {t:'생일 축하 노래',n:[4,4,5,4,7,6],d:[.75,.25,1,1,1,2],bpm:104},
+ {t:'캉캉',n:[0,1,3,2,1,4],d:[2,.5,.5,.5,.5,1],bpm:150,tail:[[4,1]]},
+ {t:'캉캉',n:[0,7,6,5,4,3],d:[.5,.5,.5,.5,.5,.5],bpm:150,tail:[[2,.5],[1,.5]]},
+ {t:'아 유 슬리핑 (Are You Sleeping)',n:[2,3,4,2,3,4],d:[1,1,2,1,1,2],bpm:120},
+ {t:'아 유 슬리핑 (Are You Sleeping)',n:[4,5,4,3,2,0],d:[.5,.5,.5,.5,1,1],bpm:120},
+ {t:'뻐꾸기',n:[4,2,4,2,1,0],d:[1,2,1,2,1,1],bpm:132,tail:[[1,1],[0,3]]},
+ {t:'기쁘다 구주 오셨네',n:[7,6,5,4,3,2],d:[1,.75,.25,1.5,.5,1],bpm:108,tail:[[1,1],[0,1.5]]},
+ {t:'핫 크로스 번',n:[2,1,0,2,1,0],d:[1,1,2,1,1,2],bpm:116}
+];
+var ORDER=[0,6,8,3,10,13,5,15,1,11,16,7,4,17,9,12,2,14];
+var RHYTHMS=[[1,1,1,1,1,1],[1,1,2,1,1,2],[1.5,.5,1,1,1,1],[1,1,1,1,2,2],[.5,.5,1,.5,.5,1]];
+var STEPS=[-2,-1,-1,0,1,1,2];
+// 고양이 합주단 30마리: [이름, 고양이]  1~18 보통, 19~27 귀함, 28~30 아주 귀함
+var CATS=[['실로폰 냥','치즈 태비'],['리코더 냥','턱시도'],['탬버린 냥','고등어'],['트라이앵글 냥','검은 고양이'],['캐스터네츠 냥','회색 단모'],['멜로디언 냥','흰 고양이'],['작은북 냥','젖소 무늬'],['우쿨렐레 냥','크림색'],['하모니카 냥','갈색 태비'],['마라카스 냥','점박이'],['소고 냥','치즈 턱시도'],['오카리나 냥','러시안 블루'],['심벌즈 냥','브리티시 쇼트헤어'],['핸드벨 냥','아메리칸 쇼트헤어'],['칼림바 냥','스코티시 폴드'],['큰북 냥','먼치킨'],['기타 냥','아비시니안'],['아코디언 냥','노르웨이 숲'],['장구 냥','삼색이'],['바이올린 냥','샴'],['하프 냥','랙돌'],['피아노 냥','페르시안'],['드럼 냥','벵갈'],['첼로 냥','메인쿤'],['플루트 냥','터키시 앙고라'],['트럼펫 냥','스핑크스'],['가야금 냥','터키시 반'],['지휘자 냥','흰 오드아이'],['해금 냥','한복 입은 고등어'],['합창단 냥','턱시도']];
+function tierOf(id){return id<=18?1:(id<=27?2:3)}
+var TIER_NAME=['','보통','귀함','아주 귀함'];
+var BAD=['시발','씨발','ㅅㅂ','ㅆㅂ','병신','ㅂㅅ','개새','새끼','좆','지랄','ㅈㄹ','미친','존나','졸라','닥쳐','섹스','fuck','shit','bitch','sex'];
+var KEY='garak-kkodle-v1',SESSION='garak-kkodle-user',CHURU_CAT=10,CHURU_DAY=20;
+var $=function(id){return document.getElementById(id)};
+
+var mode='daily',ans,rows=[],cur=[],done=false,win=false,busy=false,slow=false,popAt=-1,heard=false;
+var listens=0,hard=false,wantHard=false,streak=0,lostStreak=0;
+var user=null,award=null;
+var ac=null,playGain=null,timers=[],playing=false,nowCol=-1;
+
+function maxT(){return hard?4:6}
+function today(){var d=new Date();return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5)}
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
+function save(o){try{localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+function saveDaily(){if(mode==='daily')save({day:today(),rows:rows.map(function(r){return r.g}),listens:listens,hard:hard})}
+function label(i){return i===7?'<span class="up">도</span>':NAMES[i]}
+function starCount(){var t=rows.length;return t<=3&&listens<=2?3:(t<=5&&listens<=4?2:1)}
+function starSvg(on){return '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" fill="'+(on?'var(--near)':'none')+'" stroke="'+(on?'var(--ink)':'var(--line)')+'" stroke-width="1.4" stroke-linejoin="round"/></svg>'}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+function mark(g,a){var m=['x','x','x','x','x','x'],cnt={},i;
+  for(i=0;i<6;i++){if(g[i]===a[i])m[i]='g';else cnt[a[i]]=(cnt[a[i]]||0)+1}
+  for(i=0;i<6;i++){if(m[i]!=='g'&&cnt[g[i]]>0){m[i]='y';cnt[g[i]]--}}
+  return m}
+function makePractice(){var p=[0,2,4][Math.floor(Math.random()*3)],n=[p],i;
+  for(i=1;i<6;i++){p=Math.max(0,Math.min(7,p+STEPS[Math.floor(Math.random()*STEPS.length)]));n.push(p)}
+  return {t:'',n:n,d:RHYTHMS[Math.floor(Math.random()*RHYTHMS.length)],bpm:112}}
+
+/* ---------- 서버 ---------- */
+function api(body){
+  if(!API_URL)return demoApi(body);
+  return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
+    .then(function(r){return r.json()})}
+// 체험판: 서버와 같은 규칙을 이 기기 안에서 흉내 냅니다
+function pickCat(owned,tier){var pools={1:[],2:[],3:[]},i,order=[tier];
+  for(i=1;i<=30;i++)if(owned.indexOf(i)<0)pools[tierOf(i)].push(i);
+  for(i=tier-1;i>=1;i--)order.push(i);for(i=tier+1;i<=3;i++)order.push(i);
+  for(i=0;i<order.length;i++){var p=pools[order[i]];if(p.length)return p[Math.floor(Math.random()*p.length)]}
+  return 0}
+function demoApi(b){return new Promise(function(res){setTimeout(function(){
+  var db;try{db=JSON.parse(localStorage.getItem('garak-demo-db'))||{}}catch(e){db={}}
+  function put(){try{localStorage.setItem('garak-demo-db',JSON.stringify(db))}catch(e){}}
+  var u=db[b.nick],day=String(today());
+  if(b.action==='register'){if(u)return res({ok:false,reason:'taken'});db[b.nick]={pin:b.pin,cats:[],daily:'',cday:'',ccount:0,churu:0};put();return res({ok:true,nick:b.nick,cats:[],churu:0})}
+  if(!u)return res({ok:false,reason:'nouser'});if(u.pin!==b.pin)return res({ok:false,reason:'wrongpin'});
+  u.churu=u.churu||0;
+  if(b.action==='login')return res({ok:true,nick:b.nick,cats:u.cats,churu:u.churu});
+  if(b.action==='award'){
+    if(u.daily===day)return res({ok:true,already:true,cats:u.cats,churu:u.churu});
+    u.daily=day;var c=pickCat(u.cats,b.tier);if(c)u.cats.push(c);put();return res({ok:true,cat:c,cats:u.cats,churu:u.churu})}
+  if(b.action==='churu'){
+    if(u.cday!==day){u.cday=day;u.ccount=0}
+    var g=Math.max(0,Math.min(Math.max(1,Math.min(3,+b.stars||1))*(b.hard?2:1),CHURU_DAY-u.ccount)),cat=0;
+    u.ccount+=g;u.churu+=g;
+    if(u.churu>=CHURU_CAT){cat=pickCat(u.cats,1);if(cat){u.cats.push(cat);u.churu-=CHURU_CAT}else u.churu=CHURU_CAT}
+    put();return res({ok:true,gained:g,capped:u.ccount>=CHURU_DAY,churu:u.churu,cat:cat,cats:u.cats})}
+  res({ok:false,reason:'bad'})},250)})}
+
+/* ---------- 소리 ---------- */
+function ctx(){if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C()}
+  if(ac.state==='suspended')ac.resume();return ac}
+function tone(i,when,out){var c=ctx();if(!c)return;var t=when||c.currentTime,f=FREQ[i];
+  [[1,.5,.9],[4,.1,.22],[9.2,.03,.07]].forEach(function(p){
+    var o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*p[0];
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(p[1],t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+p[2]);
+    o.connect(g);g.connect(out||c.destination);o.start(t);o.stop(t+p[2]+0.05)})}
+function stopPlay(){timers.forEach(clearTimeout);timers=[];
+  if(playGain){try{playGain.disconnect()}catch(e){}playGain=null}
+  playing=false;nowCol=-1}
+function playSeq(seq,bpm,onStep,onEnd){stopPlay();var c=ctx();if(!c){if(onEnd)onEnd();return}
+  playGain=c.createGain();playGain.connect(c.destination);playing=true;
+  var beat=60/bpm*(slow&&mode==='practice'?1.7:1),t=0.06,start=c.currentTime;
+  seq.forEach(function(s,k){tone(s[0],start+t,playGain);
+    timers.push(setTimeout(function(){if(onStep)onStep(k,s[0])},t*1000));t+=s[1]*beat});
+  timers.push(setTimeout(function(){playing=false;nowCol=-1;if(onEnd)onEnd()},t*1000+150))}
+function ansSeq(withTail){var s=ans.n.map(function(v,i){return [v,ans.d[i]]});
+  return withTail&&ans.tail?s.concat(ans.tail):s}
+function playAnswer(withTail){
+  if(!done){if(hard&&listens>=1){toast('고수 모드에서는 한 번만 들을 수 있어요');return}
+    listens++;saveDaily();drawInfo();drawHard()}
+  heard=true;playSeq(ansSeq(withTail),ans.bpm,function(k){nowCol=k<6?k:-1;drawRhythm();drawPlay()},function(){drawRhythm();drawPlay()});drawPlay()}
+
+/* ---------- 그리기 ---------- */
+function noteIcon(d){var hollow=d>=2,dot=d===1.5||d===.75||d===3,flag=d<1;
+  return '<svg width="18" height="24" viewBox="0 0 18 24" aria-hidden="true"><ellipse cx="6" cy="19" rx="4.6" ry="3.4" transform="rotate(-20 6 19)" fill="'+(hollow?'none':'currentColor')+'" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 18V3'+(flag?'c1 4 5 4 4 9':'')+'" fill="none" stroke="currentColor" stroke-width="1.5"/>'+(dot?'<circle cx="14.5" cy="19" r="1.4" fill="currentColor"/>':'')+'</svg>'}
+function drawRhythm(){$('rhythm').innerHTML=ans.d.map(function(d,i){return '<div class="r'+(i===nowCol?' now':'')+'">'+noteIcon(d)+'</div>'}).join('')}
+function drawPlay(){$('playBtn').innerHTML=playing
+  ?'<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="5" y="5" width="12" height="12" rx="2"/></svg>'
+  :'<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M6 3l13 8-13 8z"/></svg>';
+  $('playBtn').setAttribute('aria-label',playing?'멈추기':'가락 듣기');
+  $('playBtn').classList.toggle('spent',!playing&&!done&&hard&&listens>=1)}
+function untouched(){return rows.length===0&&!heard&&!done}
+function drawHard(){var b=$('hardBtn');b.setAttribute('aria-pressed',done?wantHard:hard);b.classList.toggle('locked',!untouched()&&!done)}
+function drawBoard(){var h='',r,c;
+  for(r=0;r<maxT();r++){for(c=0;c<6;c++){
+    if(r<rows.length){var row=rows[r],shown=c<row.rev;
+      h+='<div class="t '+(shown?row.m[c]:'f')+(shown&&r===rows.length-1&&c===popAt?' pop':'')+'">'+label(row.g[c])+'</div>'}
+    else if(r===rows.length&&!done&&!busy){
+      h+=c<cur.length?'<div class="t f">'+label(cur[c])+'</div>':'<div class="t"></div>'}
+    else h+='<div class="t"></div>'}}
+  $('board').innerHTML=h}
+function drawXylo(){var st={};rows.forEach(function(row){for(var c=0;c<row.rev;c++){var v=row.g[c],m=row.m[c];
+    if(m==='g'||m==='y')st[v]='in';else if(!st[v])st[v]='x'}});
+  var bars=$('xylo').children;for(var i=0;i<8;i++)bars[i].classList.toggle('off',st[i]==='x'&&ans.n.indexOf(i)<0)}
+function drawInfo(){var d=new Date();
+  var tags=(hard?'<em class="tag hard">고수</em>':'')+(mode==='practice'&&user?'<em class="tag">츄르 '+Math.min(user.churu||0,CHURU_CAT)+'/'+CHURU_CAT+'</em>':'');
+  $('infoTitle').innerHTML=(mode==='daily'?(d.getMonth()+1)+'월 '+d.getDate()+'일의 가락':'연습 가락')+tags;
+  var st=mode==='practice'&&streak>0?' · 연속 '+streak+'곡':'';
+  $('infoSub').textContent=done?(win?rows.length+'번 만에 맞혔어요':'기회를 모두 썼어요')+st
+    :'도전 '+(rows.length+1)+'/'+maxT()+' · 들음 '+listens+'번'+st;
+  $('slowBtn').hidden=mode!=='practice'}
+function staff(){var s='<svg viewBox="0 0 330 112" role="img" aria-label="정답 악보">',i;
+  for(i=0;i<5;i++)s+='<path d="M8 '+(30+i*10)+'H322" stroke="var(--ink)" stroke-width="1.2"/>';
+  s+='<path d="M321 30V70" stroke="var(--ink)" stroke-width="3"/>';
+  ans.n.forEach(function(v,k){var x=38+k*50,y=80-v*5,d=ans.d[k],up=v<6;
+    if(v===0)s+='<path d="M'+(x-11)+' 80H'+(x+11)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+    s+='<ellipse cx="'+x+'" cy="'+y+'" rx="6.6" ry="4.8" transform="rotate(-20 '+x+' '+y+')" fill="'+(d>=2?'var(--card)':'var(--ink)')+'" stroke="var(--ink)" stroke-width="1.6"/>';
+    var sx=up?x+6:x-6,ey=up?y-30:y+30;
+    s+='<path d="M'+sx+' '+y+'V'+ey+(d<1?(up?'c1 5 7 5 5 13':'c1 -5 7 -5 5 -13'):'')+'" fill="none" stroke="var(--ink)" stroke-width="1.6"/>';
+    if(d===1.5||d===.75||d===3)s+='<circle cx="'+(x+12)+'" cy="'+(y-(v%2===0?5:0))+'" r="1.8" fill="var(--ink)"/>';
+    s+='<text x="'+x+'" y="106" text-anchor="middle" font-size="15" fill="var(--sub)" font-family="Jua, sans-serif">'+(v===7?'높은 도':NAMES[v])+'</text>'});
+  return s+'</svg>'}
+function catBox(){
+  if(!award)return '';var a=award,h='<div class="catbox">';
+  if(a.state==='loading')h+='<p>고양이가 오는 중이에요…</p>';
+  else if(a.state==='got'){var c=CATS[a.cat-1],t=tierOf(a.cat);if(t===3)h='<div class="catbox t3">'+SPARK+'<p class="goal" style="color:var(--gold-deep)">★ 아주 귀한 고양이예요! ★</p>';
+    h+=(a.gained?'<p>츄르 +'+a.gained+'개</p>':'')+'<p class="goal">'+(a.gained!=null?'츄르 냄새를 맡고 새 친구가 찾아왔어요!':'새 친구가 합주단에 들어왔어요!')+'</p><img class="new" src="'+catSrc(a.cat)+'" alt="'+c[0]+'"><b>'+c[0]+'</b><span class="chip t'+t+'">'+c[1]+' · '+TIER_NAME[t]+'</span>'
+    if(a.gained!=null)h+=churuGauge()}
+  else if(a.state==='already')h+='<p>오늘의 고양이는 이미 만났어요. 내일 또 와요!</p>';
+  else if(a.state==='churu')h+=(a.gained?'<p class="goal">츄르 +'+a.gained+'개!'+(a.req&&a.req.hard?' (고수 2배)':'')+'</p>':'<p>오늘 받을 수 있는 츄르를 다 받았어요. 내일 또 모아요!</p>')+churuGauge()
+    +'<p>츄르 '+Math.min(user.churu||0,CHURU_CAT)+'/'+CHURU_CAT+' · 10개가 모이면 고양이가 찾아와요'+(a.gained&&a.capped?'<br>오늘 받을 츄르는 이걸로 끝이에요':'')+'</p>';
+  else if(a.state==='all')h+='<p class="goal">30마리를 모두 모았어요! 합주단 완성!</p>';
+  else if(a.state==='nologin')h+='<p>'+(a.req&&a.req.kind==='churu'?'로그인하면 츄르를 모아 고양이를 만날 수 있어요.':'로그인하면 고양이를 모을 수 있어요.')+'</p><button class="btn main" id="catLogin">로그인하기</button>';
+  else if(a.state==='error')h+='<p>고양이를 부르지 못했어요. 인터넷 연결을 확인해 주세요.</p><button class="btn main" id="catRetry">다시 부르기</button>';
+  return h+'</div>'}
+function drawResult(){var box=$('result');
+  $('inputArea').hidden=done;$('acts').hidden=done;$('doneBar').hidden=!done;
+  $('doneNext').textContent=mode==='daily'?'연습하러 가기':'다음 가락';
+  if(!done){$('resultVeil').hidden=true;return}
+  var head=mode==='daily'?(win?'맞았어요! ':'정답은 ')+'‘'+ans.t+'’':(win?'맞았어요!':'아쉬워요, 정답은 이 가락이에요');
+  var sub=mode==='daily'?'내일 새 가락이 나옵니다. 더 하고 싶으면 연습에서 계속 풀 수 있어요.':'다음 가락으로 넘어가 계속 풀어 보세요.';
+  var top='';
+  if(win){var n=starCount(),st='';for(var i=0;i<3;i++)st+=starSvg(i<n);
+    top+='<div class="stars" role="img" aria-label="별 '+n+'개">'+st+'</div>';
+    top+='<div class="meta">'+(hard?'<span class="badge">고수 인증</span>':'')+'<span>'+rows.length+'번 도전 · '+listens+'번 들음</span></div>';
+    if(n<3)top+='<p class="goal">'+(n===2?'별 셋은 3번 안에, 2번 이하로 듣고 맞히기!':'별 둘은 5번 안에, 4번 이하로 듣고 맞히기!')+'</p>'}
+  if(mode==='practice')top+=win?'<p class="goal">연속 '+streak+'곡째 성공!</p>':(lostStreak>0?'<p class="goal">연속 기록이 '+lostStreak+'곡에서 멈췄어요</p>':'');
+  box.innerHTML='<h2>'+head+'</h2>'+top+catBox()+staff()+'<p>'+sub+'</p><div class="acts">'
+    +'<button class="btn" id="againBtn">'+(ans.tail?'이어서 듣기':'다시 듣기')+'</button>'
+    +'<button class="btn main" id="nextBtn">'+(mode==='daily'?'연습하러 가기':'다음 가락')+'</button></div>';
+  $('againBtn').onclick=function(){playAnswer(true)};
+  $('nextBtn').onclick=function(){$('resultVeil').hidden=true;start('practice')};
+  if($('catRetry'))$('catRetry').onclick=function(){requestCat(award.req)};
+  if($('catLogin'))$('catLogin').onclick=function(){openLogin(award.req)}}
+function draw(){drawInfo();drawRhythm();drawBoard();drawXylo();drawPlay();drawHard();drawResult()}
+
+var toastT;function toast(msg){var t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},1800)}
+
+/* ---------- 고양이 ---------- */
+function requestCat(req){
+  if(!user){award={state:'nologin',req:req};drawResult();return}
+  award={state:'loading',req:req};drawResult();
+  var body=req.kind==='churu'?{action:'churu',stars:req.stars,hard:req.hard}:{action:'award',tier:req.tier,tries:req.tries,listens:req.listens,hard:req.hard,stars:req.stars};
+  body.nick=user.nick;body.pin=user.pin;
+  api(body).then(function(r){
+      if(!r||!r.ok){award={state:'error',req:req};drawResult();return}
+      user.cats=r.cats||user.cats;if(typeof r.churu==='number')user.churu=r.churu;
+      if(req.kind==='churu')award=r.cat?{state:'got',cat:r.cat,gained:r.gained}:(user.churu>=CHURU_CAT?{state:'all'}:{state:'churu',gained:r.gained,capped:r.capped,req:req});
+      else award=r.already?{state:'already'}:r.cat?{state:'got',cat:r.cat}:{state:'all'};
+      drawResult();drawInfo()})
+    .catch(function(){award={state:'error',req:req};drawResult()})}
+function earned(){
+  if(!win)return null;var s=starCount();
+  if(mode==='daily')return {kind:'daily',tier:hard?3:(s===3?2:1),tries:rows.length,listens:listens,hard:hard,stars:s};
+  return {kind:'churu',stars:s,hard:hard}}
+function churuGauge(){var n=Math.min(user?user.churu||0:0,CHURU_CAT),h='<div class="gauge" role="img" aria-label="츄르 '+n+'개 중 '+CHURU_CAT+'개">';
+  for(var i=0;i<CHURU_CAT;i++)h+='<i'+(i<n?' class="on"':'')+'></i>';return h+'</div>'}
+var SPARK='<svg class="spark s1" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 0l2.4 7.6L20 10l-7.6 2.4L10 20l-2.4-7.6L0 10l7.6-2.4z"/></svg><svg class="spark s2" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 0l2.4 7.6L20 10l-7.6 2.4L10 20l-2.4-7.6L0 10l7.6-2.4z"/></svg>';
+function drawDex(){var owned=user?user.cats:[],h='',secs=[[1,18],[19,27],[28,30]];
+  $('dexCount').textContent=owned.length+' / 30';
+  $('dexWho').textContent=user?user.nick+'님의 합주단이에요. 아직 못 만난 고양이는 그림자로 보여요.':'로그인하면 고양이를 모을 수 있어요.';
+  $('logoutBtn').textContent=user?'로그아웃':'로그인';
+  secs.forEach(function(r,k){var t=k+1,have=0,i;for(i=r[0];i<=r[1];i++)if(owned.indexOf(i)>=0)have++;
+    h+='<div class="dexsec t'+t+'">'+(t===3?'★ ':'')+TIER_NAME[t]+'<small>'+have+' / '+(r[1]-r[0]+1)+'</small></div>';
+    for(i=r[0];i<=r[1];i++){var has=owned.indexOf(i)>=0,c=CATS[i-1];
+      h+='<div class="c t'+t+(has?'':' no')+'">'+(t===3?SPARK:'')+'<img src="'+catSrc(i)+'" alt="'+(has?c[0]:'아직 못 만난 고양이')+'" loading="lazy"><b>'+(has?c[0]:'???')+'</b><span>'+(has?c[1]:TIER_NAME[t])+'</span></div>'}});
+  $('dexGrid').innerHTML=h}
+
+/* ---------- 로그인 ---------- */
+var pendingReq=null;
+function cleanNick(n){n=String(n||'').trim();if(!/^[가-힣A-Za-z0-9]{2,8}$/.test(n))return null;
+  var low=n.toLowerCase();for(var i=0;i<BAD.length;i++)if(low.indexOf(BAD[i])>=0)return null;return n}
+function openLogin(req){pendingReq=req||null;$('loginForm').hidden=false;$('joinAsk').hidden=true;$('loginErr').textContent='';
+  $('demoNote').hidden=!!API_URL;$('loginVeil').hidden=false;setTimeout(function(){try{$('nickIn').focus()}catch(e){}},50)}
+function setUser(u){user=u;try{localStorage.setItem(SESSION,JSON.stringify({nick:u.nick,pin:u.pin}))}catch(e){}
+  $('loginVeil').hidden=true;toast(u.nick+'님, 반가워요!');drawInfo();
+  if(pendingReq){var r=pendingReq;pendingReq=null;requestCat(r)}}
+function readForm(){var nick=cleanNick($('nickIn').value),pin=$('pinIn').value.trim();
+  if(!nick){$('loginErr').textContent='닉네임은 한글·영어·숫자 2~8자로, 고운 말로 지어 주세요.';return null}
+  if(!/^\d{4}$/.test(pin)){$('loginErr').textContent='비밀번호는 숫자 4자리예요.';return null}
+  return {nick:nick,pin:pin}}
+$('loginGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disabled=true;$('loginErr').textContent='확인하는 중…';
+  api({action:'login',nick:f.nick,pin:f.pin}).then(function(r){b.disabled=false;$('loginErr').textContent='';
+    if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:r.cats||[],churu:r.churu||0});
+    if(r.reason==='nouser'){$('loginForm').hidden=true;$('joinAsk').hidden=false;$('joinErr').textContent='';
+      $('joinText').textContent='‘'+f.nick+'’은(는) 처음 보는 닉네임이에요. 이 닉네임과 비밀번호로 새로 시작할까요? 비밀번호를 꼭 기억해 두세요.';return}
+    $('loginErr').textContent=r.reason==='wrongpin'?'비밀번호가 달라요. 다시 확인해 주세요.':'닉네임이나 비밀번호를 다시 확인해 주세요.'})
+  .catch(function(){b.disabled=false;$('loginErr').textContent='서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.'})};
+$('joinBack').onclick=function(){$('joinAsk').hidden=true;$('loginForm').hidden=false};
+$('joinGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disabled=true;
+  api({action:'register',nick:f.nick,pin:f.pin}).then(function(r){b.disabled=false;
+    if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:r.cats||[],churu:r.churu||0});
+    $('joinErr').textContent=r.reason==='taken'?'방금 다른 친구가 이 닉네임을 썼어요. 다른 닉네임으로 해 주세요.':'이 닉네임은 쓸 수 없어요. 다른 닉네임으로 해 주세요.'})
+  .catch(function(){b.disabled=false;$('joinErr').textContent='서버에 연결하지 못했어요.'})};
+$('skipLogin').onclick=function(){$('loginVeil').hidden=true;pendingReq=null};
+
+/* ---------- 진행 ---------- */
+function start(m){
+  if(mode==='practice'&&ans&&!done&&(heard||rows.length))streak=0;
+  stopPlay();mode=m;rows=[];done=false;win=false;busy=false;popAt=-1;heard=false;listens=0;hard=wantHard;lostStreak=0;award=null;
+  $('tabDaily').setAttribute('aria-pressed',m==='daily');$('tabPractice').setAttribute('aria-pressed',m==='practice');
+  if(m==='daily'){var day=today();ans=SONGS[ORDER[day%ORDER.length]];var s=load();
+    if(s.day===day&&Array.isArray(s.rows)){
+      if(typeof s.hard==='boolean')hard=s.hard;listens=+s.listens||0;heard=listens>0;
+      s.rows.forEach(function(g){if(Array.isArray(g)&&g.length===6)rows.push({g:g,m:mark(g,ans.n),rev:6})});
+      rows=rows.slice(0,maxT());var last=rows[rows.length-1];
+      win=!!last&&last.m.every(function(x){return x==='g'});done=win||rows.length>=maxT()}}
+  else ans=makePractice();
+  cur=[];draw()}
+function press(i){var b=$('xylo').children[i];b.classList.add('hit');setTimeout(function(){b.classList.remove('hit')},110);
+  if(busy||done)return;
+  if(playing){stopPlay();drawRhythm();drawPlay()}
+  if(cur.length>=6){toast('여섯 칸이 다 찼어요');return}
+  cur.push(i);drawBoard()}
+function del(){if(busy||done)return;if(cur.length>0){cur.pop();drawBoard()}}
+function submit(){if(busy||done)return;
+  if(cur.length<6){toast('여섯 칸을 모두 채워 주세요');return}
+  stopPlay();var g=cur.slice(),row={g:g,m:mark(g,ans.n),rev:0};rows.push(row);busy=true;draw();
+  // 내가 넣은 음을 정답과 같은 박자로 들려주며 한 칸씩 뒤집기
+  playSeq(g.map(function(v,k){return [v,ans.d[k]]}),ans.bpm,
+    function(k){row.rev=k+1;popAt=k;nowCol=k;drawBoard();drawRhythm()},
+    function(){drawRhythm();setTimeout(finish,250)})}
+function finish(){var row=rows[rows.length-1];busy=false;popAt=-1;
+  win=row.m.every(function(x){return x==='g'});done=win||rows.length>=maxT();cur=[];
+  if(done&&mode==='practice'){if(win)streak++;else{lostStreak=streak;streak=0}}
+  saveDaily();
+  if(done){var e=earned();if(e)requestCat(e)}
+  draw();if(done){$('resultVeil').hidden=false;setTimeout(function(){playAnswer(true)},400)}}
+
+/* ---------- 연결 ---------- */
+function barsHTML(base,stepPx){var hh='';
+  for(var i=0;i<8;i++)hh+='<button class="bar" data-i="'+i+'" aria-label="'+(i===7?'높은 도':NAMES[i])+'" style="height:'+(base-i*stepPx)+'px;background:var(--c'+i+')"><i></i><span class="lab">'+label(i)+'</span><i></i></button>';
+  return hh}
+var x=$('xylo');x.innerHTML=barsHTML(96,4);
+var tx=$('tryXylo');tx.innerHTML=barsHTML(80,3);
+function tryLocked(){return heard&&!done}
+function tryPress(i){if(tryLocked()){toast('문제를 푸는 동안에는 소리가 나지 않아요');return}tone(i)}
+function onBars(el,fn){el.addEventListener('pointerdown',function(e){var b=e.target.closest('.bar');if(b){e.preventDefault();fn(+b.dataset.i)}});
+  el.addEventListener('click',function(e){var b=e.target.closest('.bar');if(b&&e.detail===0)fn(+b.dataset.i)})}
+onBars(x,press);onBars(tx,tryPress);
+function openHelp(){tx.classList.toggle('locked',tryLocked());
+  $('tryNote').textContent=tryLocked()?'가락을 들은 뒤에는 문제를 다 풀 때까지 쳐 볼 수 없어요.':'가락을 듣기 전에 막대를 눌러 소리를 익혀 보세요.';
+  $('helpVeil').hidden=false}
+$('delBtn').onclick=del;$('okBtn').onclick=submit;
+$('showResult').onclick=function(){$('resultVeil').hidden=false};
+$('doneNext').onclick=function(){start('practice')};
+$('playBtn').onclick=function(){if(busy)return;if(playing){stopPlay();drawRhythm();drawPlay()}else playAnswer(done)};
+$('slowBtn').onclick=function(){slow=!slow;this.setAttribute('aria-pressed',slow)};
+$('tabDaily').onclick=function(){if(mode!=='daily'&&!busy)start('daily')};
+$('tabPractice').onclick=function(){if(mode!=='practice'&&!busy)start('practice')};
+$('helpBtn').onclick=openHelp;
+$('dexBtn').onclick=function(){drawDex();$('dexVeil').hidden=false};
+$('logoutBtn').onclick=function(){$('dexVeil').hidden=true;
+  if(user){user=null;try{localStorage.removeItem(SESSION)}catch(e){}toast('로그아웃했어요')}else openLogin()};
+$('hardBtn').onclick=function(){if(busy)return;
+  if(done){wantHard=!wantHard;drawHard();toast(wantHard?'다음 문제부터 고수 모드예요':'다음 문제부터 보통 모드예요');return}
+  if(!untouched()){toast('문제를 시작한 뒤에는 바꿀 수 없어요');return}
+  hard=wantHard=!hard;saveDaily();draw();
+  toast(hard?'고수 모드: 한 번만 듣기, 기회 4번':'보통 모드: 기회 6번')};
+Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){b.onclick=function(){b.closest('.veil').hidden=true}});
+['helpVeil','dexVeil','resultVeil'].forEach(function(id){$(id).onclick=function(e){if(e.target===this)this.hidden=true}});
+document.addEventListener('keydown',function(e){
+  var open=['helpVeil','dexVeil','resultVeil','loginVeil'].filter(function(id){return !$(id).hidden});
+  if(open.length){if(e.key==='Escape'&&open[0]!=='loginVeil')$(open[0]).hidden=true;
+    if(e.key==='Enter'&&open[0]==='loginVeil'&&!$('loginForm').hidden)$('loginGo').click();return}
+  if(e.key>='1'&&e.key<='8')press(+e.key-1);else if(e.key==='Backspace')del();
+  else if(e.key==='Enter'&&e.target.tagName!=='BUTTON')submit()});
+
+start('daily');
+(function boot(){var s=null;try{s=JSON.parse(localStorage.getItem(SESSION))}catch(e){}
+  if(!s||!s.nick){openLogin();return}
+  api({action:'login',nick:s.nick,pin:s.pin}).then(function(r){
+    if(r.ok){user={nick:r.nick,pin:s.pin,cats:r.cats||[],churu:r.churu||0};drawInfo()}else openLogin()})
+  .catch(function(){user={nick:s.nick,pin:s.pin,cats:[]};toast('서버에 연결하지 못했어요')})})();
+})();
+</script>
+</body>
+</html>
