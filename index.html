@@ -278,7 +278,12 @@ function maxT(){return hard?4:6}
 function today(){var d=new Date();return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5)}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
 function save(o){try{localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
-function saveDaily(){if(mode==='daily')save({day:today(),rows:rows.map(function(r){return r.g}),listens:listens,hard:hard})}
+function who(){return user?user.nick:''}
+// 오늘의 가락: 로그인한 학생마다 다른 순서로 18곡을 돕니다(18일 동안 겹치지 않음). 로그인 전에는 모두 같은 곡.
+function strHash(t){var h=5381;for(var i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return h}
+function dailyIndex(){var day=today(),L=ORDER.length;if(!user)return ORDER[day%L];
+  var h=strHash(user.nick),st=[1,5,7,11,13,17][(h>>>5)%6];return ORDER[((h%L)+day*st)%L]}
+function saveDaily(){if(mode==='daily')save({day:today(),nick:who(),rows:rows.map(function(r){return r.g}),listens:listens,hard:hard})}
 function label(i){return i===7?'<span class="up">도</span>':NAMES[i]}
 function starCount(){var t=rows.length;return t<=3&&listens<=2?3:(t<=5&&listens<=4?2:1)}
 function starSvg(on){return '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" fill="'+(on?'var(--near)':'none')+'" stroke="'+(on?'var(--ink)':'var(--line)')+'" stroke-width="1.4" stroke-linejoin="round"/></svg>'}
@@ -461,7 +466,7 @@ function openLogin(req){pendingReq=req||null;$('loginForm').hidden=false;$('join
   $('demoNote').hidden=!!API_URL;$('loginVeil').hidden=false;setTimeout(function(){try{$('nickIn').focus()}catch(e){}},50)}
 function setUser(u){user=u;try{localStorage.setItem(SESSION,JSON.stringify({nick:u.nick,pin:u.pin}))}catch(e){}
   $('loginVeil').hidden=true;toast(u.nick+'님, 반가워요!');drawInfo();
-  if(pendingReq){var r=pendingReq;pendingReq=null;requestCat(r)}}
+  if(pendingReq){var r=pendingReq;pendingReq=null;requestCat(r)}else if(mode==='daily'&&!busy)start('daily')}
 function readForm(){var nick=cleanNick($('nickIn').value),pin=$('pinIn').value.trim();
   if(!nick){$('loginErr').textContent='닉네임은 한글·영어·숫자 2~8자로, 고운 말로 지어 주세요.';return null}
   if(!/^\d{4}$/.test(pin)){$('loginErr').textContent='비밀번호는 숫자 4자리예요.';return null}
@@ -486,8 +491,8 @@ function start(m){
   if(mode==='practice'&&ans&&!done&&(heard||rows.length))streak=0;
   stopPlay();mode=m;rows=[];done=false;win=false;busy=false;popAt=-1;heard=false;listens=0;hard=wantHard;lostStreak=0;award=null;
   $('tabDaily').setAttribute('aria-pressed',m==='daily');$('tabPractice').setAttribute('aria-pressed',m==='practice');
-  if(m==='daily'){var day=today();ans=SONGS[ORDER[day%ORDER.length]];var s=load();
-    if(s.day===day&&Array.isArray(s.rows)){
+  if(m==='daily'){var day=today();ans=SONGS[dailyIndex()];var s=load();
+    if(s.day===day&&(s.nick||'')===who()&&Array.isArray(s.rows)){
       if(typeof s.hard==='boolean')hard=s.hard;listens=+s.listens||0;heard=listens>0;
       s.rows.forEach(function(g){if(Array.isArray(g)&&g.length===6)rows.push({g:g,m:mark(g,ans.n),rev:6})});
       rows=rows.slice(0,maxT());var last=rows[rows.length-1];
@@ -538,7 +543,7 @@ $('tabPractice').onclick=function(){if(mode!=='practice'&&!busy)start('practice'
 $('helpBtn').onclick=openHelp;
 $('dexBtn').onclick=function(){drawDex();$('dexVeil').hidden=false};
 $('logoutBtn').onclick=function(){$('dexVeil').hidden=true;
-  if(user){user=null;try{localStorage.removeItem(SESSION)}catch(e){}toast('로그아웃했어요')}else openLogin()};
+  if(user){user=null;try{localStorage.removeItem(SESSION)}catch(e){}toast('로그아웃했어요');if(mode==='daily'&&!busy)start('daily')}else openLogin()};
 $('hardBtn').onclick=function(){if(busy)return;
   if(done){wantHard=!wantHard;drawHard();toast(wantHard?'다음 문제부터 고수 모드예요':'다음 문제부터 보통 모드예요');return}
   if(!untouched()){toast('문제를 시작한 뒤에는 바꿀 수 없어요');return}
@@ -565,8 +570,8 @@ fit();window.addEventListener('resize',function(){natural=0;fit()});
 (function boot(){var s=null;try{s=JSON.parse(localStorage.getItem(SESSION))}catch(e){}
   if(!s||!s.nick){openLogin();return}
   api({action:'login',nick:s.nick,pin:s.pin}).then(function(r){
-    if(r.ok){user={nick:r.nick,pin:s.pin,cats:r.cats||[],churu:r.churu||0};drawInfo()}else openLogin()})
-  .catch(function(){user={nick:s.nick,pin:s.pin,cats:[]};toast('서버에 연결하지 못했어요')})})();
+    if(r.ok){user={nick:r.nick,pin:s.pin,cats:r.cats||[],churu:r.churu||0};if(mode==='daily'&&!busy)start('daily');else drawInfo()}else openLogin()})
+  .catch(function(){user={nick:s.nick,pin:s.pin,cats:[],churu:0};if(mode==='daily'&&!busy)start('daily');toast('서버에 연결하지 못했어요')})})();
 })();
 </script>
 </body>
