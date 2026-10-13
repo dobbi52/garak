@@ -75,7 +75,7 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
 .result>svg{width:100%;height:auto;max-width:330px}
 .result .acts{flex-wrap:wrap}
 .result .btn{flex:1;white-space:nowrap}
-.stars{display:flex;gap:6px;justify-content:center}
+.stars{display:flex;gap:6px;justify-content:center;align-items:center}
 .badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:14px;background:var(--ink);color:var(--on-dark);font-size:15px}
 .result .meta{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;font-family:var(--body);font-size:14.5px;color:var(--sub)}
 .result .goal{font-size:16px;color:var(--ink);font-family:var(--display)}
@@ -185,10 +185,10 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
     <div class="key"><div class="t f"><span class="up">도</span></div>점이 찍힌 도는 높은 도예요.</div>
     <h2>별과 고양이</h2>
     <ol style="list-style:none;padding-left:0">
-      <li>별 셋: 3번 안에, 정답을 2번 이하로 듣고 맞히기</li>
-      <li>별 둘: 5번 안에, 정답을 4번 이하로 듣고 맞히기</li>
+      <li>별 셋(연습은 츄르 3개): 3번 안에, 정답을 2번 이하로 듣고 맞히기</li>
+      <li>별 둘(연습은 츄르 2개): 5번 안에, 정답을 4번 이하로 듣고 맞히기</li>
       <li>오늘의 가락을 맞히면 하루에 한 마리, 새 고양이가 합주단에 들어와요. 별 셋이면 귀한 고양이, 고수 인증이면 아주 귀한 고양이를 만나요.</li>
-      <li>연습에서 맞히면 별 수만큼 츄르를 받아요. 고수 모드로 맞히면 두 배예요. 츄르 10개가 모이면 새 고양이가 찾아와요. 츄르는 하루에 20개까지 받을 수 있어요.</li>
+      <li>연습에서는 별 대신 츄르를 받아요. 고수 모드로 맞히면 두 배예요. 츄르 10개가 모이면 새 고양이가 찾아와요. 츄르는 하루에 100개까지 받을 수 있어요.</li>
       <li>고수 모드: 정답은 한 번만 들을 수 있고 기회는 4번이에요. 문제를 시작하기 전에만 켜고 끌 수 있어요.</li>
       <li>느리게 듣기는 연습에서만 쓸 수 있어요.</li>
     </ol>
@@ -266,7 +266,7 @@ var CATS=[['실로폰 냥','치즈 태비'],['리코더 냥','턱시도'],['탬�
 function tierOf(id){return id<=18?1:(id<=27?2:3)}
 var TIER_NAME=['','보통','귀함','아주 귀함'];
 var BAD=['시발','씨발','ㅅㅂ','ㅆㅂ','병신','ㅂㅅ','개새','새끼','좆','지랄','ㅈㄹ','미친','존나','졸라','닥쳐','섹스','fuck','shit','bitch','sex'];
-var KEY='garak-kkodle-v1',SESSION='garak-kkodle-user',CHURU_CAT=10,CHURU_DAY=20;
+var KEY='garak-kkodle-v1',SESSION='garak-kkodle-user',CHURU_CAT=10,CHURU_DAY=100;
 var $=function(id){return document.getElementById(id)};
 
 var mode='daily',ans,rows=[],cur=[],done=false,win=false,busy=false,slow=false,popAt=-1,heard=false;
@@ -286,6 +286,7 @@ function dailyIndex(){var day=today(),L=ORDER.length;if(!user)return ORDER[day%L
 function saveDaily(){if(mode==='daily')save({day:today(),nick:who(),rows:rows.map(function(r){return r.g}),listens:listens,hard:hard})}
 function label(i){return i===7?'<span class="up">도</span>':NAMES[i]}
 function starCount(){var t=rows.length;return t<=3&&listens<=2?3:(t<=5&&listens<=4?2:1)}
+function churuSvg(on){return '<svg width="30" height="34" viewBox="0 0 24 28" aria-hidden="true"><path d="M6.5 2.5h11l-1.5 3.5v17a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3V6z" fill="'+(on?'var(--c1)':'none')+'" stroke="'+(on?'var(--ink)':'var(--line)')+'" stroke-width="1.5" stroke-linejoin="round"/><path d="M9.5 11h5M9.5 15h5" stroke="'+(on?'var(--card)':'var(--line)')+'" stroke-width="1.6" stroke-linecap="round"/></svg>'}
 function starSvg(on){return '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" fill="'+(on?'var(--near)':'none')+'" stroke="'+(on?'var(--ink)':'var(--line)')+'" stroke-width="1.4" stroke-linejoin="round"/></svg>'}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
@@ -396,10 +397,10 @@ function catBox(){
   if(!award)return '';var a=award,h='<div class="catbox">';
   if(a.state==='loading')h+='<p>고양이가 오는 중이에요…</p>';
   else if(a.state==='got'){var c=CATS[a.cat-1],t=tierOf(a.cat);if(t===3)h='<div class="catbox t3">'+SPARK+'<p class="goal" style="color:var(--gold-deep)">★ 아주 귀한 고양이예요! ★</p>';
-    h+=(a.gained?'<p>츄르 +'+a.gained+'개</p>':'')+'<p class="goal">'+(a.gained!=null?'츄르 냄새를 맡고 새 친구가 찾아왔어요!':'새 친구가 합주단에 들어왔어요!')+'</p><img class="new" src="'+catSrc(a.cat)+'" alt="'+c[0]+'"><b>'+c[0]+'</b><span class="chip t'+t+'">'+c[1]+' · '+TIER_NAME[t]+'</span>'
+    h+='<p class="goal">'+(a.gained!=null?'츄르 냄새를 맡고 새 친구가 찾아왔어요!':'새 친구가 합주단에 들어왔어요!')+'</p><img class="new" src="'+catSrc(a.cat)+'" alt="'+c[0]+'"><b>'+c[0]+'</b><span class="chip t'+t+'">'+c[1]+' · '+TIER_NAME[t]+'</span>'
     if(a.gained!=null)h+=churuGauge()}
   else if(a.state==='already')h+='<p>오늘의 고양이는 이미 만났어요. 내일 또 와요!</p>';
-  else if(a.state==='churu')h+=(a.gained?'<p class="goal">츄르 +'+a.gained+'개!'+(a.req&&a.req.hard?' (고수 2배)':'')+'</p>':'<p>오늘 받을 수 있는 츄르를 다 받았어요. 내일 또 모아요!</p>')+churuGauge()
+  else if(a.state==='churu')h+=(a.gained?'':'<p>오늘 받을 수 있는 츄르를 다 받았어요. 내일 또 모아요!</p>')+churuGauge()
     +'<p>츄르 '+Math.min(user.churu||0,CHURU_CAT)+'/'+CHURU_CAT+' · 10개가 모이면 고양이가 찾아와요'+(a.gained&&a.capped?'<br>오늘 받을 츄르는 이걸로 끝이에요':'')+'</p>';
   else if(a.state==='all')h+='<p class="goal">30마리를 모두 모았어요! 합주단 완성!</p>';
   else if(a.state==='nologin')h+='<p>'+(a.req&&a.req.kind==='churu'?'로그인하면 츄르를 모아 고양이를 만날 수 있어요.':'로그인하면 고양이를 모을 수 있어요.')+'</p><button class="btn main" id="catLogin">로그인하기</button>';
@@ -412,10 +413,11 @@ function drawResult(){var box=$('result');
   var head=mode==='daily'?(win?'맞았어요! ':'정답은 ')+'‘'+ans.t+'’':(win?'맞았어요!':'아쉬워요, 정답은 이 가락이에요');
   var sub=mode==='daily'?'내일 새 가락이 나옵니다. 더 하고 싶으면 연습에서 계속 풀 수 있어요.':'다음 가락으로 넘어가 계속 풀어 보세요.';
   var top='';
-  if(win){var n=starCount(),st='';for(var i=0;i<3;i++)st+=starSvg(i<n);
-    top+='<div class="stars" role="img" aria-label="별 '+n+'개">'+st+'</div>';
+  if(win){var n=starCount(),st='',pr=mode==='practice',w=pr?'츄르':'별',i;
+    for(i=0;i<3;i++)st+=pr?churuSvg(i<n):starSvg(i<n);
+    top+='<div class="stars" role="img" aria-label="'+w+' '+n+'개'+(pr&&hard?', 고수 모드 두 배':'')+'">'+st+(pr&&hard?'<span class="badge">×2</span>':'')+'</div>';
     top+='<div class="meta">'+(hard?'<span class="badge">고수 인증</span>':'')+'<span>'+rows.length+'번 도전 · '+listens+'번 들음</span></div>';
-    if(n<3)top+='<p class="goal">'+(n===2?'별 셋은 3번 안에, 2번 이하로 듣고 맞히기!':'별 둘은 5번 안에, 4번 이하로 듣고 맞히기!')+'</p>'}
+    if(n<3)top+='<p class="goal">'+(n===2?w+' 셋은 3번 안에, 2번 이하로 듣고 맞히기!':w+' 둘은 5번 안에, 4번 이하로 듣고 맞히기!')+'</p>'}
   if(mode==='practice')top+=win?'<p class="goal">연속 '+streak+'곡째 성공!</p>':(lostStreak>0?'<p class="goal">연속 기록이 '+lostStreak+'곡에서 멈췄어요</p>':'');
   box.innerHTML='<h2>'+head+'</h2>'+top+catBox()+staff()+'<p>'+sub+'</p><div class="acts">'
     +'<button class="btn" id="againBtn">'+(ans.tail?'이어서 듣기':'다시 듣기')+'</button>'
