@@ -122,6 +122,8 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
 .dex .c.no img{filter:brightness(0);opacity:.13}
 .dex .c b{font-weight:400;font-size:14px;white-space:nowrap}
 .dex .c span{font-family:var(--body);font-size:11.5px;color:var(--sub);text-align:center}
+.hearts{color:var(--c0);font-style:normal;letter-spacing:1px}
+.dex .cnt{font-style:normal;font-family:var(--body);font-size:12px;color:var(--sub);display:flex;gap:4px;align-items:center}
 .gauge{display:flex;gap:4px;justify-content:center}
 .gauge i{width:16px;height:22px;border-radius:5px;background:var(--line)}
 .gauge i.on{background:var(--c1)}
@@ -187,8 +189,9 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
     <ol style="list-style:none;padding-left:0">
       <li>별 셋(연습은 츄르 3개): 3번 안에, 정답을 2번 이하로 듣고 맞히기</li>
       <li>별 둘(연습은 츄르 2개): 5번 안에, 정답을 4번 이하로 듣고 맞히기</li>
-      <li>오늘의 가락을 맞히면 하루에 한 마리, 새 고양이가 합주단에 들어와요. 별 셋이면 귀한 고양이, 고수 인증이면 아주 귀한 고양이를 만나요.</li>
-      <li>연습에서는 별 대신 츄르를 받아요. 고수 모드로 맞히면 두 배예요. 츄르 10개가 모이면 새 고양이가 찾아와요. 츄르는 하루에 100개까지 받을 수 있어요.</li>
+      <li>오늘의 가락을 맞히면 하루에 한 마리 고양이를 만나요. 별 셋이면 귀한 고양이, 고수 인증이면 아주 귀한 고양이예요.</li>
+      <li>연습에서는 별 대신 츄르를 받아요. 고수 모드로 맞히면 두 배예요. 츄르 10개가 모일 때마다 고양이가 찾아와요. 가끔은 귀한 고양이도 와요.</li>
+      <li>같은 고양이를 또 만나면 친밀도가 올라요. 2번 만나면 ♥, 5번 ♥♥, 10번 ♥♥♥.</li>
       <li>고수 모드: 정답은 한 번만 들을 수 있고 기회는 4번이에요. 문제를 시작하기 전에만 켜고 끌 수 있어요.</li>
       <li>느리게 듣기는 연습에서만 쓸 수 있어요.</li>
     </ol>
@@ -266,7 +269,7 @@ var CATS=[['실로폰 냥','치즈 태비'],['리코더 냥','턱시도'],['탬�
 function tierOf(id){return id<=18?1:(id<=27?2:3)}
 var TIER_NAME=['','보통','귀함','아주 귀함'];
 var BAD=['시발','씨발','ㅅㅂ','ㅆㅂ','병신','ㅂㅅ','개새','새끼','좆','지랄','ㅈㄹ','미친','존나','졸라','닥쳐','섹스','fuck','shit','bitch','sex'];
-var KEY='garak-kkodle-v1',SESSION='garak-kkodle-user',CHURU_CAT=10,CHURU_DAY=100;
+var KEY='garak-kkodle-v1',SESSION='garak-kkodle-user',CHURU_CAT=10,HEARTS=[2,5,10];
 var $=function(id){return document.getElementById(id)};
 
 var mode='daily',ans,rows=[],cur=[],done=false,win=false,busy=false,slow=false,popAt=-1,heard=false;
@@ -304,28 +307,28 @@ function api(body){
   return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
     .then(function(r){return r.json()})}
 // 체험판: 서버와 같은 규칙을 이 기기 안에서 흉내 냅니다
-function pickCat(owned,tier){var pools={1:[],2:[],3:[]},i,order=[tier];
-  for(i=1;i<=30;i++)if(owned.indexOf(i)<0)pools[tierOf(i)].push(i);
-  for(i=tier-1;i>=1;i--)order.push(i);for(i=tier+1;i<=3;i++)order.push(i);
-  for(i=0;i<order.length;i++){var p=pools[order[i]];if(p.length)return p[Math.floor(Math.random()*p.length)]}
-  return 0}
+function normCats(c){var o={};
+  if(Array.isArray(c))c.forEach(function(i){o[i]=(o[i]||0)+1});
+  else if(c&&typeof c==='object')for(var k in c)if(+c[k]>0)o[k]=+c[k];
+  return o}
+function pickCat(tier){var a=[];for(var i=1;i<=30;i++)if(tierOf(i)===tier)a.push(i);return a[Math.floor(Math.random()*a.length)]}
+// 체험판: 서버와 같은 규칙을 이 기기 안에서 흉내 냅니다
 function demoApi(b){return new Promise(function(res){setTimeout(function(){
   var db;try{db=JSON.parse(localStorage.getItem('garak-demo-db'))||{}}catch(e){db={}}
   function put(){try{localStorage.setItem('garak-demo-db',JSON.stringify(db))}catch(e){}}
   var u=db[b.nick],day=String(today());
-  if(b.action==='register'){if(u)return res({ok:false,reason:'taken'});db[b.nick]={pin:b.pin,cats:[],daily:'',cday:'',ccount:0,churu:0};put();return res({ok:true,nick:b.nick,cats:[],churu:0})}
+  if(b.action==='register'){if(u)return res({ok:false,reason:'taken'});db[b.nick]={pin:b.pin,cats:{},daily:'',churu:0};put();return res({ok:true,nick:b.nick,cats:{},churu:0})}
   if(!u)return res({ok:false,reason:'nouser'});if(u.pin!==b.pin)return res({ok:false,reason:'wrongpin'});
-  u.churu=u.churu||0;
+  u.churu=u.churu||0;u.cats=normCats(u.cats);
   if(b.action==='login')return res({ok:true,nick:b.nick,cats:u.cats,churu:u.churu});
   if(b.action==='award'){
     if(u.daily===day)return res({ok:true,already:true,cats:u.cats,churu:u.churu});
-    u.daily=day;var c=pickCat(u.cats,b.tier);if(c)u.cats.push(c);put();return res({ok:true,cat:c,cats:u.cats,churu:u.churu})}
+    u.daily=day;var c=pickCat(Math.max(1,Math.min(3,+b.tier||1)));u.cats[c]=(u.cats[c]||0)+1;put();
+    return res({ok:true,cat:c,count:u.cats[c],cats:u.cats,churu:u.churu})}
   if(b.action==='churu'){
-    if(u.cday!==day){u.cday=day;u.ccount=0}
-    var g=Math.max(0,Math.min(Math.max(1,Math.min(3,+b.stars||1))*(b.hard?2:1),CHURU_DAY-u.ccount)),cat=0;
-    u.ccount+=g;u.churu+=g;
-    if(u.churu>=CHURU_CAT){cat=pickCat(u.cats,1);if(cat){u.cats.push(cat);u.churu-=CHURU_CAT}else u.churu=CHURU_CAT}
-    put();return res({ok:true,gained:g,capped:u.ccount>=CHURU_DAY,churu:u.churu,cat:cat,cats:u.cats})}
+    var g=Math.max(1,Math.min(3,+b.stars||1))*(b.hard?2:1),cat=0,count=0;u.churu+=g;
+    if(u.churu>=CHURU_CAT){u.churu-=CHURU_CAT;cat=pickCat(Math.random()<0.1?2:1);u.cats[cat]=(u.cats[cat]||0)+1;count=u.cats[cat]}
+    put();return res({ok:true,gained:g,churu:u.churu,cat:cat,count:count,cats:u.cats})}
   res({ok:false,reason:'bad'})},250)})}
 
 /* ---------- 소리 ---------- */
@@ -396,13 +399,14 @@ function staff(){var s='<svg viewBox="0 0 330 112" role="img" aria-label="정답
 function catBox(){
   if(!award)return '';var a=award,h='<div class="catbox">';
   if(a.state==='loading')h+='<p>고양이가 오는 중이에요…</p>';
-  else if(a.state==='got'){var c=CATS[a.cat-1],t=tierOf(a.cat);if(t===3)h='<div class="catbox t3">'+SPARK+'<p class="goal" style="color:var(--gold-deep)">★ 아주 귀한 고양이예요! ★</p>';
-    h+='<p class="goal">'+(a.gained!=null?'츄르 냄새를 맡고 새 친구가 찾아왔어요!':'새 친구가 합주단에 들어왔어요!')+'</p><img class="new" src="'+catSrc(a.cat)+'" alt="'+c[0]+'"><b>'+c[0]+'</b><span class="chip t'+t+'">'+c[1]+' · '+TIER_NAME[t]+'</span>'
-    if(a.gained!=null)h+=churuGauge()}
+  else if(a.state==='got'){var c=CATS[a.cat-1],t=tierOf(a.cat),isNew=a.count===1,up=!isNew&&HEARTS.indexOf(a.count)>=0;
+    if(t===3)h='<div class="catbox t3">'+SPARK+'<p class="goal" style="color:var(--gold-deep)">★ 아주 귀한 고양이예요! ★</p>';
+    h+='<p class="goal">'+(isNew?(a.fromChuru?'츄르 냄새를 맡고 새 친구가 찾아왔어요!':'새 친구가 합주단에 들어왔어요!'):'‘'+c[0]+'’을 또 만났어요!'+(up?' 친밀도가 올랐어요!':''))+'</p>';
+    h+='<img class="new" src="'+catSrc(a.cat)+'" alt="'+c[0]+'"><b>'+c[0]+'</b><span class="chip t'+t+'">'+c[1]+' · '+TIER_NAME[t]+'</span>';
+    if(!isNew)h+='<p>'+hearts(a.count)+' 만난 횟수 '+a.count+'번 · '+nextHeart(a.count)+'</p>';
+    if(a.fromChuru)h+=churuGauge()}
   else if(a.state==='already')h+='<p>오늘의 고양이는 이미 만났어요. 내일 또 와요!</p>';
-  else if(a.state==='churu')h+=(a.gained?'':'<p>오늘 받을 수 있는 츄르를 다 받았어요. 내일 또 모아요!</p>')+churuGauge()
-    +'<p>츄르 '+Math.min(user.churu||0,CHURU_CAT)+'/'+CHURU_CAT+' · 10개가 모이면 고양이가 찾아와요'+(a.gained&&a.capped?'<br>오늘 받을 츄르는 이걸로 끝이에요':'')+'</p>';
-  else if(a.state==='all')h+='<p class="goal">30마리를 모두 모았어요! 합주단 완성!</p>';
+  else if(a.state==='churu')h+=churuGauge()+'<p>모은 츄르 '+Math.min(user.churu||0,CHURU_CAT)+'/'+CHURU_CAT+' · 10개가 모일 때마다 고양이가 찾아와요</p>';
   else if(a.state==='nologin')h+='<p>'+(a.req&&a.req.kind==='churu'?'로그인하면 츄르를 모아 고양이를 만날 수 있어요.':'로그인하면 고양이를 모을 수 있어요.')+'</p><button class="btn main" id="catLogin">로그인하기</button>';
   else if(a.state==='error')h+='<p>고양이를 부르지 못했어요. 인터넷 연결을 확인해 주세요.</p><button class="btn main" id="catRetry">다시 부르기</button>';
   return h+'</div>'}
@@ -438,11 +442,15 @@ function requestCat(req){
   body.nick=user.nick;body.pin=user.pin;
   api(body).then(function(r){
       if(!r||!r.ok){award={state:'error',req:req};drawResult();return}
-      user.cats=r.cats||user.cats;if(typeof r.churu==='number')user.churu=r.churu;
-      if(req.kind==='churu')award=r.cat?{state:'got',cat:r.cat,gained:r.gained}:(user.churu>=CHURU_CAT?{state:'all'}:{state:'churu',gained:r.gained,capped:r.capped,req:req});
-      else award=r.already?{state:'already'}:r.cat?{state:'got',cat:r.cat}:{state:'all'};
+      user.cats=normCats(r.cats);if(typeof r.churu==='number')user.churu=r.churu;
+      if(r.already)award={state:'already'};
+      else if(r.cat)award={state:'got',cat:r.cat,count:r.count||1,fromChuru:req.kind==='churu'};
+      else award={state:'churu',gained:r.gained,req:req};
       drawResult();drawInfo()})
     .catch(function(){award={state:'error',req:req};drawResult()})}
+function heartLv(n){return n>=HEARTS[2]?3:n>=HEARTS[1]?2:n>=HEARTS[0]?1:0}
+function hearts(n){var lv=heartLv(n),h='';for(var i=0;i<3;i++)h+=i<lv?'♥':'♡';return '<span class="hearts" aria-label="친밀도 '+lv+'단계">'+h+'</span>'}
+function nextHeart(n){for(var i=0;i<3;i++)if(HEARTS[i]>n)return (HEARTS[i]-n)+'번 더 만나면 하트가 하나 더!';return '친밀도 최고예요!'}
 function earned(){
   if(!win)return null;var s=starCount();
   if(mode==='daily')return {kind:'daily',tier:hard?3:(s===3?2:1),tries:rows.length,listens:listens,hard:hard,stars:s};
@@ -450,14 +458,16 @@ function earned(){
 function churuGauge(){var n=Math.min(user?user.churu||0:0,CHURU_CAT),h='<div class="gauge" role="img" aria-label="츄르 '+n+'개 중 '+CHURU_CAT+'개">';
   for(var i=0;i<CHURU_CAT;i++)h+='<i'+(i<n?' class="on"':'')+'></i>';return h+'</div>'}
 var SPARK='<svg class="spark s1" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 0l2.4 7.6L20 10l-7.6 2.4L10 20l-2.4-7.6L0 10l7.6-2.4z"/></svg><svg class="spark s2" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 0l2.4 7.6L20 10l-7.6 2.4L10 20l-2.4-7.6L0 10l7.6-2.4z"/></svg>';
-function drawDex(){var owned=user?user.cats:[],h='',secs=[[1,18],[19,27],[28,30]];
-  $('dexCount').textContent=owned.length+' / 30';
-  $('dexWho').textContent=user?user.nick+'님의 합주단이에요. 아직 못 만난 고양이는 그림자로 보여요.':'로그인하면 고양이를 모을 수 있어요.';
+function drawDex(){var owned=user?user.cats:{},h='',secs=[[1,18],[19,27],[28,30]],total=0,i;
+  for(i=1;i<=30;i++)if(owned[i])total++;
+  $('dexCount').textContent=total+' / 30';
+  $('dexWho').textContent=user?user.nick+'님의 합주단이에요. 같은 고양이를 또 만나면 하트가 쌓여요.':'로그인하면 고양이를 모을 수 있어요.';
   $('logoutBtn').textContent=user?'로그아웃':'로그인';
-  secs.forEach(function(r,k){var t=k+1,have=0,i;for(i=r[0];i<=r[1];i++)if(owned.indexOf(i)>=0)have++;
+  secs.forEach(function(r,k){var t=k+1,have=0;for(i=r[0];i<=r[1];i++)if(owned[i])have++;
     h+='<div class="dexsec t'+t+'">'+(t===3?'★ ':'')+TIER_NAME[t]+'<small>'+have+' / '+(r[1]-r[0]+1)+'</small></div>';
-    for(i=r[0];i<=r[1];i++){var has=owned.indexOf(i)>=0,c=CATS[i-1];
-      h+='<div class="c t'+t+(has?'':' no')+'">'+(t===3?SPARK:'')+'<img src="'+catSrc(i)+'" alt="'+(has?c[0]:'아직 못 만난 고양이')+'" loading="lazy"><b>'+(has?c[0]:'???')+'</b><span>'+(has?c[1]:TIER_NAME[t])+'</span></div>'}});
+    for(i=r[0];i<=r[1];i++){var n=owned[i]||0,c=CATS[i-1];
+      h+='<div class="c t'+t+(n?'':' no')+'">'+(t===3?SPARK:'')+'<img src="'+catSrc(i)+'" alt="'+(n?c[0]:'아직 못 만난 고양이')+'" loading="lazy"><b>'+(n?c[0]:'???')+'</b><span>'+(n?c[1]:TIER_NAME[t])+'</span>'
+        +(n?'<em class="cnt">'+hearts(n)+' ×'+n+'</em>':'')+'</div>'}});
   $('dexGrid').innerHTML=h}
 
 /* ---------- 로그인 ---------- */
@@ -475,7 +485,7 @@ function readForm(){var nick=cleanNick($('nickIn').value),pin=$('pinIn').value.t
   return {nick:nick,pin:pin}}
 $('loginGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disabled=true;$('loginErr').textContent='확인하는 중…';
   api({action:'login',nick:f.nick,pin:f.pin}).then(function(r){b.disabled=false;$('loginErr').textContent='';
-    if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:r.cats||[],churu:r.churu||0});
+    if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:normCats(r.cats),churu:r.churu||0});
     if(r.reason==='nouser'){$('loginForm').hidden=true;$('joinAsk').hidden=false;$('joinErr').textContent='';
       $('joinText').textContent='‘'+f.nick+'’은(는) 처음 보는 닉네임이에요. 이 닉네임과 비밀번호로 새로 시작할까요? 비밀번호를 꼭 기억해 두세요.';return}
     $('loginErr').textContent=r.reason==='wrongpin'?'비밀번호가 달라요. 다시 확인해 주세요.':'닉네임이나 비밀번호를 다시 확인해 주세요.'})
@@ -483,7 +493,7 @@ $('loginGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disab
 $('joinBack').onclick=function(){$('joinAsk').hidden=true;$('loginForm').hidden=false};
 $('joinGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disabled=true;
   api({action:'register',nick:f.nick,pin:f.pin}).then(function(r){b.disabled=false;
-    if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:r.cats||[],churu:r.churu||0});
+    if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:normCats(r.cats),churu:r.churu||0});
     $('joinErr').textContent=r.reason==='taken'?'방금 다른 친구가 이 닉네임을 썼어요. 다른 닉네임으로 해 주세요.':'이 닉네임은 쓸 수 없어요. 다른 닉네임으로 해 주세요.'})
   .catch(function(){b.disabled=false;$('joinErr').textContent='서버에 연결하지 못했어요.'})};
 $('skipLogin').onclick=function(){$('loginVeil').hidden=true;pendingReq=null};
@@ -572,8 +582,8 @@ fit();window.addEventListener('resize',function(){natural=0;fit()});
 (function boot(){var s=null;try{s=JSON.parse(localStorage.getItem(SESSION))}catch(e){}
   if(!s||!s.nick){openLogin();return}
   api({action:'login',nick:s.nick,pin:s.pin}).then(function(r){
-    if(r.ok){user={nick:r.nick,pin:s.pin,cats:r.cats||[],churu:r.churu||0};if(mode==='daily'&&!busy)start('daily');else drawInfo()}else openLogin()})
-  .catch(function(){user={nick:s.nick,pin:s.pin,cats:[],churu:0};if(mode==='daily'&&!busy)start('daily');toast('서버에 연결하지 못했어요')})})();
+    if(r.ok){user={nick:r.nick,pin:s.pin,cats:normCats(r.cats),churu:r.churu||0};if(mode==='daily'&&!busy)start('daily');else drawInfo()}else openLogin()})
+  .catch(function(){user={nick:s.nick,pin:s.pin,cats:{},churu:0};if(mode==='daily'&&!busy)start('daily');toast('서버에 연결하지 못했어요')})})();
 })();
 </script>
 </body>
