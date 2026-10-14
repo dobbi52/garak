@@ -129,6 +129,13 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
 .gauge i.on{background:var(--c1)}
 .demo{font-family:var(--body);font-size:12.5px;color:var(--sub);text-align:center}
 @media (prefers-reduced-motion:reduce){.dex .c.t3::after{animation:none;display:none}.t.pop,.catbox img.new,.veil.bottom .sheet{animation:none}.bar{transition:none}}
+/* ── 생각 오락실 통합 계정 ── */
+#hubLogin:not([hidden]){display:flex!important}
+#hubLogin:not([hidden])~#loginForm{margin-top:4px;padding-top:12px;border-top:1px dashed var(--line)}
+.hubnote{margin:0;font-size:13.5px;line-height:1.55;color:var(--sub)}
+.hubnote b{color:var(--ink)}
+.hubnag{display:block;width:100%;margin:0 0 10px;padding:10px 12px;border-radius:14px;border:2px solid var(--ink);background:var(--card);font-family:var(--body);font-size:13.5px;line-height:1.5;text-align:left}
+.hubnag[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -214,8 +221,12 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
 <div class="veil" id="loginVeil" hidden>
   <div class="sheet" role="dialog" aria-labelledby="loginTitle">
     <h2 id="loginTitle">가락 꼬들</h2>
+    <div id="hubLogin" hidden style="flex-direction:column;gap:10px">
+      <button class="btn main" id="hubGo" type="button" style="flex:none">생각 오락실 계정으로 로그인</button>
+      <p class="hubnote">계정 하나로 꼬들·셈들·가락 꼬들·퀸즈를 모두 해요. <b>예전 가락 꼬들 닉네임과 비밀번호 그대로</b> 가입하면 고양이가 이어져요.</p>
+    </div>
     <div id="loginForm" style="display:flex;flex-direction:column;gap:12px">
-      <p>닉네임과 비밀번호 4자리로 들어오면, 어느 기기에서든 모은 고양이가 이어져요.</p>
+      <p id="oldNote">닉네임과 비밀번호 4자리로 들어오면, 어느 기기에서든 모은 고양이가 이어져요.</p>
       <label class="field" for="nickIn">닉네임 (한글·영어·숫자 2~8자)<input id="nickIn" autocomplete="off" maxlength="8"></label>
       <label class="field" for="pinIn">비밀번호 (숫자 4자리)<input id="pinIn" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
       <div class="err" id="loginErr"></div>
@@ -231,6 +242,7 @@ h1{margin:0;font-size:26px;font-weight:400;white-space:nowrap}
   </div>
 </div>
 
+<script src="https://dobbi52.github.io/games/arcade-auth.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -270,6 +282,8 @@ function tierOf(id){return id<=18?1:(id<=27?2:3)}
 var TIER_NAME=['','보통','귀함','아주 귀함'];
 var BAD=['시발','씨발','ㅅㅂ','ㅆㅂ','병신','ㅂㅅ','개새','새끼','좆','지랄','ㅈㄹ','미친','존나','졸라','닥쳐','섹스','fuck','shit','bitch','sex'];
 var KEY='garak-kkodle-v1',SESSION='garak-kkodle-user',CHURU_CAT=10,HEARTS=[2,5,10];
+var AA=window.ArcadeAuth||null;   /* 생각 오락실 통합 계정 */
+var OLD_CLOSED=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'})>='2026-11-01';   /* 이날부터 예전 가락 꼬들 로그인 막음 */
 var $=function(id){return document.getElementById(id)};
 
 var mode='daily',ans,rows=[],cur=[],done=false,win=false,busy=false,slow=false,popAt=-1,heard=false;
@@ -379,6 +393,7 @@ function drawXylo(){var st={};rows.forEach(function(row){for(var c=0;c<row.rev;c
     if(m==='g'||m==='y')st[v]='in';else if(!st[v])st[v]='x'}});
   var bars=$('xylo').children;for(var i=0;i<8;i++)bars[i].classList.toggle('off',st[i]==='x'&&ans.n.indexOf(i)<0)}
 function drawInfo(){var d=new Date();
+  var nag=$('hubNag');if(nag)nag.hidden=!(AA&&user&&!user.hub);
   var tags=(hard?'<em class="tag hard">고수</em>':'')+(mode==='practice'&&user?'<em class="tag">츄르 '+Math.min(user.churu||0,CHURU_CAT)+'/'+CHURU_CAT+'</em>':'');
   $('infoTitle').innerHTML=(mode==='daily'?(d.getMonth()+1)+'월 '+d.getDate()+'일의 가락':'연습 가락')+tags;
   var st=mode==='practice'&&streak>0?' · 연속 '+streak+'곡':'';
@@ -439,7 +454,7 @@ function requestCat(req){
   if(!user){award={state:'nologin',req:req};drawResult();return}
   award={state:'loading',req:req};drawResult();
   var body=req.kind==='churu'?{action:'churu',stars:req.stars,hard:req.hard}:{action:'award',tier:req.tier,tries:req.tries,listens:req.listens,hard:req.hard,stars:req.stars};
-  body.nick=user.nick;body.pin=user.pin;
+  body.nick=user.nick;body.pin=user.pin;if(user.hub)body.hub=1;
   api(body).then(function(r){
       if(!r||!r.ok){award={state:'error',req:req};drawResult();return}
       user.cats=normCats(r.cats);if(typeof r.churu==='number')user.churu=r.churu;
@@ -474,9 +489,12 @@ function drawDex(){var owned=user?user.cats:{},h='',secs=[[1,18],[19,27],[28,30]
 var pendingReq=null;
 function cleanNick(n){n=String(n||'').trim();if(!/^[가-힣A-Za-z0-9]{2,8}$/.test(n))return null;
   var low=n.toLowerCase();for(var i=0;i<BAD.length;i++)if(low.indexOf(BAD[i])>=0)return null;return n}
-function openLogin(req){pendingReq=req||null;$('loginForm').hidden=false;$('joinAsk').hidden=true;$('loginErr').textContent='';
+function openLogin(req){pendingReq=req||null;
+  if(AA&&user&&user.hub){AA.open({});return}
+  $('hubLogin').hidden=!AA;$('loginForm').hidden=!!AA&&OLD_CLOSED;$('joinAsk').hidden=true;$('loginErr').textContent='';
+  if(AA){$('oldNote').textContent='예전에 가락 꼬들에서 만든 닉네임만 들어갈 수 있어요. 10월 31일까지만 쓸 수 있으니 위의 생각 오락실 계정으로 바꿔 주세요.';}
   $('demoNote').hidden=!!API_URL;$('loginVeil').hidden=false;setTimeout(function(){try{$('nickIn').focus()}catch(e){}},50)}
-function setUser(u){user=u;try{localStorage.setItem(SESSION,JSON.stringify({nick:u.nick,pin:u.pin}))}catch(e){}
+function setUser(u){user=u;if(!u.hub)try{localStorage.setItem(SESSION,JSON.stringify({nick:u.nick,pin:u.pin}))}catch(e){}
   $('loginVeil').hidden=true;toast(u.nick+'님, 반가워요!');drawInfo();
   if(pendingReq){var r=pendingReq;pendingReq=null;requestCat(r)}else if(mode==='daily'&&!busy)start('daily')}
 function readForm(){var nick=cleanNick($('nickIn').value),pin=$('pinIn').value.trim();
@@ -486,6 +504,8 @@ function readForm(){var nick=cleanNick($('nickIn').value),pin=$('pinIn').value.t
 $('loginGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disabled=true;$('loginErr').textContent='확인하는 중…';
   api({action:'login',nick:f.nick,pin:f.pin}).then(function(r){b.disabled=false;$('loginErr').textContent='';
     if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:normCats(r.cats),churu:r.churu||0});
+    if(r.reason==='nouser'&&AA){$('loginErr').textContent='처음 보는 닉네임이에요. 새로 시작하려면 위의 [생각 오락실 계정으로 로그인]을 눌러 가입해 주세요.';return}
+    if(r.reason==='closed'){$('loginErr').textContent='예전 가락 꼬들 로그인은 끝났어요. 생각 오락실 계정으로 로그인해 주세요.';return}
     if(r.reason==='nouser'){$('loginForm').hidden=true;$('joinAsk').hidden=false;$('joinErr').textContent='';
       $('joinText').textContent='‘'+f.nick+'’은(는) 처음 보는 닉네임이에요. 이 닉네임과 비밀번호로 새로 시작할까요? 비밀번호를 꼭 기억해 두세요.';return}
     $('loginErr').textContent=r.reason==='wrongpin'?'비밀번호가 달라요. 다시 확인해 주세요.':'닉네임이나 비밀번호를 다시 확인해 주세요.'})
@@ -494,7 +514,7 @@ $('joinBack').onclick=function(){$('joinAsk').hidden=true;$('loginForm').hidden=
 $('joinGo').onclick=function(){var f=readForm();if(!f)return;var b=this;b.disabled=true;
   api({action:'register',nick:f.nick,pin:f.pin}).then(function(r){b.disabled=false;
     if(r.ok)return setUser({nick:r.nick,pin:f.pin,cats:normCats(r.cats),churu:r.churu||0});
-    $('joinErr').textContent=r.reason==='taken'?'방금 다른 친구가 이 닉네임을 썼어요. 다른 닉네임으로 해 주세요.':'이 닉네임은 쓸 수 없어요. 다른 닉네임으로 해 주세요.'})
+    $('joinErr').textContent=r.reason==='hubonly'?'새로 시작하는 친구는 생각 오락실 계정으로 가입해 주세요.':r.reason==='taken'?'방금 다른 친구가 이 닉네임을 썼어요. 다른 닉네임으로 해 주세요.':'이 닉네임은 쓸 수 없어요. 다른 닉네임으로 해 주세요.'})
   .catch(function(){b.disabled=false;$('joinErr').textContent='서버에 연결하지 못했어요.'})};
 $('skipLogin').onclick=function(){$('loginVeil').hidden=true;pendingReq=null};
 
@@ -555,7 +575,7 @@ $('tabPractice').onclick=function(){if(mode!=='practice'&&!busy)start('practice'
 $('helpBtn').onclick=openHelp;
 $('dexBtn').onclick=function(){drawDex();$('dexVeil').hidden=false};
 $('logoutBtn').onclick=function(){$('dexVeil').hidden=true;
-  if(user){user=null;try{localStorage.removeItem(SESSION)}catch(e){}toast('로그아웃했어요');if(mode==='daily'&&!busy)start('daily')}else openLogin()};
+  if(user){var wasHub=user.hub;user=null;try{localStorage.removeItem(SESSION)}catch(e){}if(wasHub&&AA)AA.logout();toast('로그아웃했어요');if(mode==='daily'&&!busy)start('daily')}else openLogin()};
 $('hardBtn').onclick=function(){if(busy)return;
   if(done){wantHard=!wantHard;drawHard();toast(wantHard?'다음 문제부터 고수 모드예요':'다음 문제부터 보통 모드예요');return}
   if(!untouched()){toast('문제를 시작한 뒤에는 바꿀 수 없어요');return}
@@ -579,7 +599,29 @@ function fit(){var w=window.innerWidth,h=window.innerHeight,z=1;
   Array.prototype.forEach.call(document.querySelectorAll('.sheet'),function(el){el.style.zoom=z===1?'':Math.min(z,1.3)})}
 start('daily');
 fit();window.addEventListener('resize',function(){natural=0;fit()});
+/* ── 생각 오락실 통합 계정 ── */
+function hubLogin(a){
+  if(!a)return;
+  return api({action:'login',hub:1,nick:a.nick,pin:a.pin}).then(function(r){
+    if(r.ok){try{localStorage.removeItem(SESSION)}catch(e){}setUser({nick:r.nick,pin:a.pin,hub:true,cats:normCats(r.cats),churu:r.churu||0});return true}
+    toast(r.msg||'생각 오락실에서 다시 로그인해 주세요');return false})
+  .catch(function(){user={nick:a.nick,pin:a.pin,hub:true,cats:{},churu:0};drawInfo();toast('서버에 연결하지 못했어요');return true})}
+function openHub(){if(AA)AA.open({gameName:'가락 꼬들',color:'#2E9E6A',onPlay:function(){}})}
+if(AA){
+  $('hubGo').onclick=openHub;
+  var nagEl=document.createElement('button');nagEl.id='hubNag';nagEl.className='hubnag';nagEl.type='button';nagEl.hidden=true;
+  nagEl.innerHTML='<b>생각 오락실 통합 계정으로 바꿔 주세요!</b> 예전 가락 꼬들 로그인은 10월 31일까지예요. 지금 닉네임과 비밀번호로 가입하면 고양이가 그대로 이어져요.';
+  nagEl.onclick=openHub;
+  var appEl=document.querySelector('.app');appEl.insertBefore(nagEl,appEl.firstChild);
+  AA.onChange(function(a){
+    if(a&&!(user&&user.hub&&user.nick===a.nick)){$('loginVeil').hidden=true;hubLogin(a)}
+    else if(!a&&user&&user.hub){user=null;drawInfo();if(mode==='daily'&&!busy)start('daily');openLogin()}
+  });
+}
 (function boot(){var s=null;try{s=JSON.parse(localStorage.getItem(SESSION))}catch(e){}
+  var ha=AA&&AA.get();
+  if(ha){hubLogin(ha);AA.refresh();return}
+  if(s&&s.nick&&OLD_CLOSED){try{localStorage.removeItem(SESSION)}catch(e){}s=null}
   if(!s||!s.nick){openLogin();return}
   api({action:'login',nick:s.nick,pin:s.pin}).then(function(r){
     if(r.ok){user={nick:r.nick,pin:s.pin,cats:normCats(r.cats),churu:r.churu||0};if(mode==='daily'&&!busy)start('daily');else drawInfo()}else openLogin()})
